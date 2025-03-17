@@ -1,0 +1,70 @@
+Crear Nuevos Roles
+http://127.0.0.1:8000/api/roles
+POST
+{
+	"nombre": "cliente"
+}
+
+Crear Nuevo Usuario
+http://127.0.0.1:8000/api/usuarios
+POST
+{
+    "nombre_usuario": "johndoe",
+    "password": "password123",
+    "email": "jndoe22@example.com",
+    "nombre": "John",
+    "apellido_paterno": "Doe",
+    "apellido_materno": "Smith",
+    "fecha_nacimiento": "1990-01-01",
+    "direccion": "123 Main St",
+    "cuidad": "Ciudad de México",
+    "estado": "CDMX",
+    "codigo_postal": "12345",
+    "pais": "México",
+    "genero": "Masculino",
+    "numero_telefono": "555-1234"
+}
+
+
+login usuario
+http://127.0.0.1:8000/api/usuarios/login
+POST 
+{
+	"password": "Holamundo2",
+	"email": "baasvue2zvictorgael05@gmail.com"
+}
+
+
+TOKEN JWT USUARIO_CLIENTE
+eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYXBpL3VzdWFyaW9zL2xvZ2luIiwiaWF0IjoxNzI3NjMwNjczLCJleHAiOjE3Mjc2MzQyNzMsIm5iZiI6MTcyNzYzMDY3MywianRpIjoiSk4wZ1NocHl1ZUVSTU9BVCIsInN1YiI6IjUiLCJwcnYiOiI1ODcwODYzZDRhNjJkNzkxNDQzZmFmOTM2ZmMzNjgwMzFkMTEwYzRmIn0.uN9qrSr4f-j059Wfm36BrvqJZ1jXMqul5IzE1YYilCw
+
+
+TOKEN JWT USUARIO_PERSONA
+eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYXBpL3VzdWFyaW9zL2xvZ2luIiwiaWF0IjoxNzI3NjM1MTg1LCJleHAiOjE3Mjc2Mzg3ODUsIm5iZiI6MTcyNzYzNTE4NSwianRpIjoiQTh6MENhcnkxb1cyQnJkeSIsInN1YiI6IjgiLCJwcnYiOiI1ODcwODYzZDRhNjJkNzkxNDQzZmFmOTM2ZmMzNjgwMzFkMTEwYzRmIn0.mFo0lpqd8mvmONnstCgv237BoUWD-2T023sykevUv8Q
+
+TOKEN JWT USUARIO_PERSONA_HUESPED
+eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwOi8vMTI3LjAuMC4xOjgwMDAvYXBpL3VzdWFyaW9zL2xvZ2luIiwiaWF0IjoxNzI3NjUyNjk3LCJleHAiOjE3Mjc2NTYyOTcsIm5iZiI6MTcyNzY1MjY5NywianRpIjoiNkFhczI5ZmV3SmhGNHZCSiIsInN1YiI6IjEwIiwicHJ2IjoiNTg3MDg2M2Q0YTYyZDc5MTQ0M2ZhZjkzNmZjMzY4MDMxZDExMGM0ZiJ9.zSQzDMHjJ6Dgr0EtbgKF94ZtzSqGypizPdkpXBtuwI4
+
+
+
+
+
+TOKEN SANDCTUM
+
+{
+	"token": "1|T6jOBzDCicavMsDvevNLAUtIYj6a5A3rRSqHKsqn4d5a2007"
+}
+
+2|y0uk2J4XLfaYFWFIHSwyCPmP0zeHuCJIp1noOxWwa9af9609
+
+
+
+
+
+
+
+
+
+
+SANDCTUM TOKEN FUNCIONAL
+5|CPrPCxaZj0zHNuzeyo3XPjLzThs79FQo7dkY2ToHd89cb9bf
