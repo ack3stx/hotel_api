@@ -50,6 +50,7 @@ class ReservacionesController extends Controller
             'precio_total' => 'required',
             'metodo_pago' => 'required',
             'monto_pagado' => 'required',
+            'estado_reservacion' => 'required',
         ]);
         if($Validator->fails()){
             return response()->json($Validator->errors(), 422);
@@ -63,6 +64,7 @@ class ReservacionesController extends Controller
         $reservacion->precio_total = $request->precio_total;
         $reservacion->metodo_pago = $request->metodo_pago;
         $reservacion->monto_pagado = $request->monto_pagado;
+        $reservacion->estado_reservacion = $request->estado_reservacion;
         $reservacion->save();
         return response()->json($reservacion,200);
     }
@@ -76,6 +78,8 @@ class ReservacionesController extends Controller
         $reservacion->delete();
         return response()->json(['message' => 'Reservacion eliminada correctamente'],200);
     }
+
+
     public function mostrarReservacion($id = null)
 {
     if ($id == null) {

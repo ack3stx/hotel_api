@@ -13,7 +13,7 @@ class MantenimientoController extends Controller
         
         $Validator = Validator::make($request->all(), [
             'habitacion_id' => 'required',
-            'empleados_id' => 'required',
+            'empleado_id' => 'required',
             'tipo' => 'required',
             'descripcion' => 'required',
         ]);
@@ -22,7 +22,7 @@ class MantenimientoController extends Controller
         }
         $mantenimiento = new Mantenimiento();
         $mantenimiento->habitacion_id = $request->habitacion_id;
-        $mantenimiento->empleado_id = $request->empleados_id;
+        $mantenimiento->empleado_id = $request->empleado_id;
         $mantenimiento->tipo = $request->tipo;
         $mantenimiento->descripcion = $request->descripcion;
         $mantenimiento->save();
@@ -32,7 +32,7 @@ class MantenimientoController extends Controller
     {
         $Validator = Validator::make($request->all(), [
             'habitacion_id' => 'required',
-            'empleados_id' => 'required',
+            'empleado_id' => 'required',
             'tipo' => 'required',
             'descripcion' => 'required',
         ]);
@@ -45,7 +45,7 @@ class MantenimientoController extends Controller
             return response()->json(['error' => 'Mantenimiento no encontrado'], 404);
         }
         $mantenimiento->habitacion_id = $request->habitacion_id;
-        $mantenimiento->empleado_id = $request->empleados_id;
+        $mantenimiento->empleado_id = $request->empleado_id;
         $mantenimiento->tipo = $request->tipo;
         $mantenimiento->descripcion = $request->descripcion;
         $mantenimiento->save();
@@ -60,7 +60,16 @@ class MantenimientoController extends Controller
         $mantenimiento->delete();
         return response()->json(['message' => 'Mantenimiento eliminado'], 200);
     }
-    public function mostrarMantenimientos(){
+    public function mostrarMantenimientos($id = null){
+
+        if($id){
+            $mantenimiento = Mantenimiento::find($id);
+            if(!$mantenimiento){
+                return response()->json(['error' => 'Mantenimiento no encontrado'], 404);
+            }
+            return response()->json($mantenimiento, 200);
+        }
+
         $mantenimientos = Mantenimiento::all();
         return response()->json($mantenimientos, 200);
     }

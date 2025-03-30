@@ -15,30 +15,47 @@ use App\Http\Controllers\HuespedController;
 use App\Http\Controllers\MantenimientoController;
 use App\Http\Controllers\FacturasController;
 use App\Http\Controllers\AuditoriaController;
+use Illuminate\Support\Facades\Broadcast;
+use App\Http\Middleware\JwtMiddleware;
+
+
 
 // Rutas públicas (sin autenticación)
 Route::post('v1/login', [UserController::class, 'login']);
 Route::post('v1/register', [UserController::class, 'register']);
 Route::post('v1/verificar', [UserController::class, 'verifyEmail']);
+Route::post( 'v1/reenviar', [UserController::class, 'renviarcodigo']);
+
+
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    Route::get('v1/userinfo', [UserController::class, 'VerificarCuenta']);
+});
 
 // Rutas de Usuario
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/users/{id?}', [UserController::class, 'mostrarUsuarios']);
+    });
+
+    
     // Rutas sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
         Route::post('v1/desabilitar', [UserController::class, 'desabilitarUsuario']);
         Route::post('v1/activar', [UserController::class, 'activar_usuario']);
+        Route::post('v1/cambiarrol/{id}', [UserController::class, 'darroluser']);
+        Route::post('v1/quitarrol/{id}',[UserController::class, 'cambiarroluser']);
+        Route::put('v1/users/{id}', [UserController::class, 'actualizarUser']);
     });
-    
-    // Ruta para administradores y usuarios normales
-    Route::get('v1/users', [UserController::class, 'mostrarUsuarios']);
 });
 
 // Rutas de Reservación
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Reservacion/{id?}/', [ReservacionesController::class, 'mostrarReservacion']);
-    Route::get('v1/Reservacion/usuario', [ReservacionesController::class, 'reservacionUsuario']);
-
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Reservacion/{id?}/', [ReservacionesController::class, 'mostrarReservacion']);
+        Route::get('v1/Reservacion/usuario', [ReservacionesController::class, 'reservacionUsuario']);
+    });
 
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -50,9 +67,11 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
 });
 
 // Rutas de Factura
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Factura/{id?}', [FacturasController::class, 'mostrarFacturas']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Factura/{id?}', [FacturasController::class, 'mostrarFacturas']);
+    });
     
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -63,9 +82,11 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
 });
 
 // Rutas de Habitación
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Habitacion', [HabitacionController::class, 'mostrarHabitaciones']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Habitacion', [HabitacionController::class, 'mostrarHabitaciones']);
+    });
     
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -76,10 +97,12 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
 });
 
 // Rutas de Huésped
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Huesped', [HuespedController::class, 'mostrarHuespedes']);
-    Route::get('v1/Huesped/actual', [HuespedController::class, 'getHuespedActual']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Huesped/{id?}', [HuespedController::class, 'mostrarHuespedes']);
+        Route::get('v1/Huesped/actual', [HuespedController::class, 'getHuespedActual']);
+    });
     
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -90,9 +113,11 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
 });
 
 // Rutas de Mantenimiento
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Mantenimiento', [MantenimientoController::class, 'mostrarMantenimientos']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Mantenimiento/{id?}', [MantenimientoController::class, 'mostrarMantenimientos']);
+    });
     
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -103,9 +128,11 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
 });
 
 // Rutas de Empleado
-Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
-    // Rutas GET para todos los roles
-    Route::get('v1/Empleados', [EmpleadoController::class, 'mostrarEmpleados']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Rutas GET para todos los roles (con auditoría)
+    Route::middleware(['auditoria.consulta'])->group(function () {
+        Route::get('v1/Empleados', [EmpleadoController::class, 'mostrarEmpleados']);
+    });
     
     // Rutas POST/PUT/DELETE sólo para administradores
     Route::middleware(['rol:2'])->group(function () {
@@ -115,10 +142,14 @@ Route::middleware(['auth.jwt', 'auditoria'])->group(function () {
     });
 });
 
-
-// Rutas de auditoría - solo auth.jwt sin middleware de auditoria
-Route::middleware(['auth.jwt'])->group(function () {
+// Rutas de auditoría (con su propio registro de auditoría)
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
     Route::get('v1/auditoria', [AuditoriaController::class, 'index']);
-    Route::get('v1/auditoria/{id}', [AuditoriaController::class, 'show']);
     Route::get('v1/auditoria/estadisticas/usuarios', [AuditoriaController::class, 'estadisticasPorUsuario']);
 });
+
+//websockets
+Broadcast::routes(['middleware' => ['auth.jwt', 'JwtMiddleware']]);
+
+// Ruta para SSE de Facturas (con auditoría)
+Route::get('v1/Facturas/SSE', [FacturasController::class, 'facturaStream']);

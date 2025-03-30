@@ -9,10 +9,12 @@ use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Tymon\JWTAuth\Contracts\JWTSubject; // Asegúrate de importar la interfaz JWTSubject
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\MongoAuditable;
+
 
 class User extends Authenticatable implements JWTSubject // Implementa la interfaz JWTSubject
 {
-    use HasApiTokens, HasFactory, Notifiable,SoftDeletes;
+    use HasApiTokens, HasFactory, Notifiable,SoftDeletes, MongoAuditable;
 
     /**
      * The attributes that are mass assignable.

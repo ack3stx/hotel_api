@@ -41,7 +41,9 @@ class Kernel extends HttpKernel
 
         'api' => [
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-            'throttle:api',
+
+            //AQUI EDITE ESTA LINEA GAEL PARA QUE NO ME DIERA PROLEMAS CON LA CANTIDAD DE REQUEST
+            //'throttle:api',
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
         ],
     ];
@@ -66,7 +68,9 @@ class Kernel extends HttpKernel
         'auth.jwt' => \Tymon\JWTAuth\Http\Middleware\Authenticate::class,
         'role' => \App\Http\Middleware\RoleMiddleware::class,        
         'roleauth' => \App\Http\Middleware\RoleMiddlewareauth::class,
-        'auditoria' => \App\Http\Middleware\LogAuditoriaMiddleware::class,
         'rol' => \App\Http\Middleware\RolMiddleware::class,
+        'auditoria' => \App\Http\Middleware\MongoAuditoriaMiddleware::class,
+        'auditoria.consulta' => \App\Http\Middleware\ConsultaAuditoriaMiddleware::class,
+        'JwtMiddleware' => \App\Http\Middleware\JwtMiddleware::class,
     ];
 }

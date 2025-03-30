@@ -39,8 +39,9 @@
       21 => 'Illuminate\\View\\ViewServiceProvider',
       22 => 'App\\Providers\\AppServiceProvider',
       23 => 'App\\Providers\\AuthServiceProvider',
-      24 => 'App\\Providers\\EventServiceProvider',
-      25 => 'App\\Providers\\RouteServiceProvider',
+      24 => 'App\\Providers\\BroadcastServiceProvider',
+      25 => 'App\\Providers\\EventServiceProvider',
+      26 => 'App\\Providers\\RouteServiceProvider',
     ),
     'aliases' => 
     array (
@@ -138,19 +139,21 @@
   ),
   'broadcasting' => 
   array (
-    'default' => 'log',
+    'default' => 'pusher',
     'connections' => 
     array (
       'pusher' => 
       array (
         'driver' => 'pusher',
-        'key' => '',
-        'secret' => '',
-        'app_id' => '',
+        'key' => 'local',
+        'secret' => 'local_secret',
+        'app_id' => 'local',
         'options' => 
         array (
-          'cluster' => 'mt1',
-          'useTLS' => true,
+          'host' => '127.0.0.1',
+          'port' => 6001,
+          'scheme' => 'http',
+          'encrypted' => true,
         ),
         'client_options' => 
         array (
@@ -252,6 +255,7 @@
     array (
       0 => 'api/*',
       1 => 'sanctum/csrf-cookie',
+      2 => 'broadcasting/auth',
     ),
     'allowed_methods' => 
     array (
@@ -272,7 +276,7 @@
     array (
     ),
     'max_age' => 0,
-    'supports_credentials' => false,
+    'supports_credentials' => true,
   ),
   'database' => 
   array (
@@ -485,7 +489,7 @@
       'slack' => 
       array (
         'driver' => 'slack',
-        'url' => 'https://hooks.slack.com/services/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',
+        'url' => NULL,
         'username' => 'Laravel Log',
         'emoji' => ':boom:',
         'level' => 'debug',
@@ -601,7 +605,7 @@
   ),
   'queue' => 
   array (
-    'default' => 'database',
+    'default' => 'sync',
     'connections' => 
     array (
       'sync' => 
@@ -725,6 +729,97 @@
     ),
     'compiled' => 'C:\\Examen_igmar\\Examen_igmar\\storage\\framework\\views',
   ),
+  'websockets' => 
+  array (
+    'dashboard' => 
+    array (
+      'port' => 6001,
+      'domain' => NULL,
+      'path' => 'laravel-websockets',
+      'middleware' => 
+      array (
+        0 => 'web',
+        1 => 'BeyondCode\\LaravelWebSockets\\Dashboard\\Http\\Middleware\\Authorize',
+      ),
+    ),
+    'apps' => 
+    array (
+      0 => 
+      array (
+        'id' => 'local',
+        'name' => 'Laravel',
+        'host' => NULL,
+        'key' => 'local',
+        'secret' => 'local_secret',
+        'path' => NULL,
+        'capacity' => NULL,
+        'enable_client_messages' => false,
+        'enable_statistics' => false,
+        'allowed_origins' => 
+        array (
+        ),
+      ),
+    ),
+    'app_provider' => 'BeyondCode\\LaravelWebSockets\\Apps\\ConfigAppProvider',
+    'allowed_origins' => 
+    array (
+    ),
+    'max_request_size_in_kb' => 250,
+    'path' => 'laravel-websockets',
+    'middleware' => 
+    array (
+      0 => 'web',
+      1 => 'BeyondCode\\LaravelWebSockets\\Dashboard\\Http\\Middleware\\Authorize',
+    ),
+    'statistics' => 
+    array (
+      'store' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Stores\\DatabaseStore',
+      'interval_in_seconds' => 60,
+      'delete_statistics_older_than_days' => 60,
+    ),
+    'ssl' => 
+    array (
+      'local_cert' => NULL,
+      'capath' => NULL,
+      'local_pk' => NULL,
+      'passphrase' => NULL,
+      'verify_peer' => false,
+      'allow_self_signed' => true,
+    ),
+    'channel_manager' => 'BeyondCode\\LaravelWebSockets\\WebSockets\\Channels\\ChannelManagers\\ArrayChannelManager',
+    'managers' => 
+    array (
+      'app' => 'BeyondCode\\LaravelWebSockets\\Apps\\ConfigAppManager',
+    ),
+    'replication' => 
+    array (
+      'mode' => 'local',
+      'modes' => 
+      array (
+        'local' => 
+        array (
+          'channel_manager' => 'BeyondCode\\LaravelWebSockets\\ChannelManagers\\LocalChannelManager',
+          'collector' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Collectors\\MemoryCollector',
+        ),
+        'redis' => 
+        array (
+          'connection' => 'default',
+          'channel_manager' => 'BeyondCode\\LaravelWebSockets\\ChannelManagers\\RedisChannelManager',
+          'collector' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Collectors\\RedisCollector',
+        ),
+      ),
+    ),
+    'handlers' => 
+    array (
+      'websocket' => 'BeyondCode\\LaravelWebSockets\\Server\\WebSocketHandler',
+      'health' => 'BeyondCode\\LaravelWebSockets\\Server\\HealthHandler',
+      'trigger_event' => 'BeyondCode\\LaravelWebSockets\\API\\TriggerEvent',
+      'fetch_channels' => 'BeyondCode\\LaravelWebSockets\\API\\FetchChannels',
+      'fetch_channel' => 'BeyondCode\\LaravelWebSockets\\API\\FetchChannel',
+      'fetch_users' => 'BeyondCode\\LaravelWebSockets\\API\\FetchUsers',
+    ),
+    'promise_resolver' => 'React\\Promise\\FulfilledPromise',
+  ),
   'flare' => 
   array (
     'key' => NULL,
@@ -809,86 +904,6 @@
       2 => 'Spatie\\LaravelIgnition\\Recorders\\LogRecorder\\LogRecorder',
       3 => 'Spatie\\LaravelIgnition\\Recorders\\QueryRecorder\\QueryRecorder',
     ),
-  ),
-  'websockets' => 
-  array (
-    'dashboard' => 
-    array (
-      'port' => 6001,
-      'domain' => NULL,
-      'path' => 'laravel-websockets',
-      'middleware' => 
-      array (
-        0 => 'web',
-        1 => 'BeyondCode\\LaravelWebSockets\\Dashboard\\Http\\Middleware\\Authorize',
-      ),
-    ),
-    'managers' => 
-    array (
-      'app' => 'BeyondCode\\LaravelWebSockets\\Apps\\ConfigAppManager',
-    ),
-    'apps' => 
-    array (
-      0 => 
-      array (
-        'id' => '',
-        'name' => 'Laravel',
-        'host' => NULL,
-        'key' => '',
-        'secret' => '',
-        'path' => NULL,
-        'capacity' => NULL,
-        'enable_client_messages' => false,
-        'enable_statistics' => true,
-        'allowed_origins' => 
-        array (
-        ),
-      ),
-    ),
-    'replication' => 
-    array (
-      'mode' => 'local',
-      'modes' => 
-      array (
-        'local' => 
-        array (
-          'channel_manager' => 'BeyondCode\\LaravelWebSockets\\ChannelManagers\\LocalChannelManager',
-          'collector' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Collectors\\MemoryCollector',
-        ),
-        'redis' => 
-        array (
-          'connection' => 'default',
-          'channel_manager' => 'BeyondCode\\LaravelWebSockets\\ChannelManagers\\RedisChannelManager',
-          'collector' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Collectors\\RedisCollector',
-        ),
-      ),
-    ),
-    'statistics' => 
-    array (
-      'store' => 'BeyondCode\\LaravelWebSockets\\Statistics\\Stores\\DatabaseStore',
-      'interval_in_seconds' => 60,
-      'delete_statistics_older_than_days' => 60,
-    ),
-    'max_request_size_in_kb' => 250,
-    'ssl' => 
-    array (
-      'local_cert' => NULL,
-      'capath' => NULL,
-      'local_pk' => NULL,
-      'passphrase' => NULL,
-      'verify_peer' => false,
-      'allow_self_signed' => true,
-    ),
-    'handlers' => 
-    array (
-      'websocket' => 'BeyondCode\\LaravelWebSockets\\Server\\WebSocketHandler',
-      'health' => 'BeyondCode\\LaravelWebSockets\\Server\\HealthHandler',
-      'trigger_event' => 'BeyondCode\\LaravelWebSockets\\API\\TriggerEvent',
-      'fetch_channels' => 'BeyondCode\\LaravelWebSockets\\API\\FetchChannels',
-      'fetch_channel' => 'BeyondCode\\LaravelWebSockets\\API\\FetchChannel',
-      'fetch_users' => 'BeyondCode\\LaravelWebSockets\\API\\FetchUsers',
-    ),
-    'promise_resolver' => 'React\\Promise\\FulfilledPromise',
   ),
   'tinker' => 
   array (
