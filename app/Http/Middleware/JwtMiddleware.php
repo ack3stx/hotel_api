@@ -33,6 +33,16 @@ class JwtMiddleware extends BaseMiddleware
                     'message' => 'Tu cuenta ha sido deshabilitada. Contacta al administrador.'
                 ], 403);
             }
+            
+            // Verificar si el usuario tiene rol 1 (rol restringido)
+            if ($user->rol === '1') {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No tienes permisos para acceder a esta sección.',
+                    'details' => 'Tu rol actual no tiene privilegios para esta operación.'
+                ], 403);
+            }
+            
         } catch (Exception $e) {
             if ($e instanceof TokenInvalidException) {
                 return response()->json([

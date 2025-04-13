@@ -20,7 +20,16 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 });
 
 Broadcast::channel('Huesped', function ($user) {
+    if ($user->rol === '1' || $user->estado === 'ban' || $user->estado === 'inactivo') {
+        Log::warning('Usuario restringido intentó conectarse al canal Huesped', [
+            'user_id' => $user->id,
+            'rol' => $user->rol,
+            'estado' => $user->estado
+        ]);
+        return false;
+    }
+    
     return [
-        'id'=>$user->id,
+        'id' => $user->id,
     ];
 });

@@ -7,7 +7,6 @@ use Illuminate\Support\Facades\Request;
 
 trait MongoAuditable
 {
-    // Variable para almacenar datos originales (NO se guardará en la base de datos)
     protected $auditOriginalDataTemporal;
 
     protected static function bootMongoAuditable()
@@ -23,16 +22,13 @@ trait MongoAuditable
             );
         });
 
-        // Registrar actualización - guarda los datos originales
         static::updating(function ($model) {
-            // Guardar datos antiguos en propiedad TEMPORAL (no en atributo del modelo)
             $model->auditOriginalDataTemporal = $model->getOriginal();
         });
         
         static::updated(function ($model) {
             $request = Request::instance();
             
-            // Obtener los datos originales de la propiedad temporal
             $oldData = $model->auditOriginalDataTemporal ?? [];
             
             LogAuditoria::registrarAccion(
@@ -44,7 +40,6 @@ trait MongoAuditable
             );
         });
 
-        // Registrar eliminación
         static::deleted(function ($model) {
             $request = Request::instance();
             LogAuditoria::registrarAccion(

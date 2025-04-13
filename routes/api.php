@@ -25,6 +25,9 @@ Route::post('v1/login', [UserController::class, 'login']);
 Route::post('v1/register', [UserController::class, 'register']);
 Route::post('v1/verificar', [UserController::class, 'verifyEmail']);
 Route::post( 'v1/reenviar', [UserController::class, 'renviarcodigo']);
+Route::post('v1/solicitar-nuevo-token', [UserController::class, 'solicitarNuevoToken']);
+Route::post('v1/newToken',[UserController::class, 'refreshToken']);
+
 
 
 Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
@@ -46,6 +49,7 @@ Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
         Route::post('v1/cambiarrol/{id}', [UserController::class, 'darroluser']);
         Route::post('v1/quitarrol/{id}',[UserController::class, 'cambiarroluser']);
         Route::put('v1/users/{id}', [UserController::class, 'actualizarUser']);
+        Route::post('v1/guestrol/{id}', [UserController::class, 'darrolguest']);
     });
 });
 
@@ -149,7 +153,12 @@ Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
 });
 
 //websockets
-Broadcast::routes(['middleware' => ['auth.jwt', 'JwtMiddleware']]);
+Broadcast::routes(['middleware' => ['auth:api']]);
 
 // Ruta para SSE de Facturas (con auditoría)
-Route::get('v1/Facturas/SSE', [FacturasController::class, 'facturaStream']);
+Route::middleware(['auth.jwt', 'JwtMiddleware'])->group(function () {
+    // Ruta para SSE de Facturas (con auditoría)
+    Route::get('v1/Facturas/SSE', [FacturasController::class, 'facturaStream']);
+});
+
+

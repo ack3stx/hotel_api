@@ -28,12 +28,11 @@ use Twilio\Rest\Client;
 use App\Models\Partida;
 use App\Models\Historial_Partida;
 use App\Models\Intento;
-
+use Illuminate\Support\Facades\Cache;
 
 
 class UserController extends Controller
 {
-    
 public function register(Request $request)
 {
     $validator = Validator::make($request->all(), [
@@ -46,40 +45,38 @@ public function register(Request $request)
         return response()->json(['errors' => $validator->errors()], 422);
     }
 
+    // Generar código de verificación de 6 dígitos
+    $codigo_verificacion = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+    
     $usuario = new User(); 
     $usuario->name = $request->input('name');
     $usuario->password = bcrypt($request->input('password'));
     $usuario->email = $request->input('email');
     $usuario->rol = '1';
     $usuario->estado = 'inactivo';
-    
-    $codigo_verificacion = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
     $usuario->codigo_verificacion = $codigo_verificacion;
     $usuario->save();
 
-
-    $rutaFirmada = encrypt([
-        'user_id' => $usuario->id,
-        'email' => $usuario->email,
-        'expires' => now()->addMinutes(10)->timestamp
-    ]);
-
-    $url = "http://localhost:4200/confirm-acount?token=" . urlencode($rutaFirmada);
+    $verificationUrl = URL::temporarySignedRoute(
+        'activar.cuenta', 
+        now()->addMinutes(5),
+        [
+            'email' => $usuario->email
+        ]
+    );
 
     try {
-        Mail::send('Mail.verificacion', 
-            [
-                'usuario' => $usuario, 
-                'codigo_verificacion' => $codigo_verificacion,
-                'url' => $url
-            ], 
-            function ($message) use ($usuario) {
-                $message->to($usuario->email)
-                       ->subject('Código de Verificación');
+        Mail::send('emails.verification', [
+            'usuario' => $usuario,
+            'codigo' => $codigo_verificacion,
+            'url' => $verificationUrl
+        ], function($message) use ($usuario) {
+            $message->to($usuario->email)
+                    ->subject('Activa tu cuenta');
         });
-    
+        
         return response()->json([
-            'message' => 'Registro exitoso. Se ha enviado un código de verificación a tu correo.',
+            'message' => 'Registro exitoso. Se ha enviado un enlace de verificación a tu correo.',
         ], 200);
     } catch (\Exception $e) {
         \Log::error('Error en envío de correo: ' . $e->getMessage());
@@ -89,62 +86,50 @@ public function register(Request $request)
         ], 500);
     }
 }
-
-public function verifyEmail(Request $request)
+public function verifyEmail(Request $request, $id, $hash, $code)
 {
-    $validator = Validator::make($request->all(), [
-        'code' => 'required|string|size:6',
-        'token' => 'required|string'
+    // Verificar si la firma de la URL es válida
+    if (!$request->hasValidSignature()) {
+        return view('email-verification-error', [
+            'message' => 'El enlace de verificación ha expirado o es inválido.'
+        ]);
+    }
+
+    $usuario = User::findOrFail($id);
+
+    // Verificar que el hash coincida con el email del usuario
+    if (sha1($usuario->email) !== $hash) {
+        return view('email-verification-error', [
+            'message' => 'El enlace de verificación es inválido.'
+        ]);
+    }
+
+    // Verificar el código de verificación
+    if ($usuario->codigo_verificacion !== $code) {
+        return view('email-verification-error', [
+            'message' => 'El código de verificación es inválido.'
+        ]);
+    }
+
+    // Verificar si la cuenta ya está activada
+    if ($usuario->estado === 'activo') {
+        return view('email-verification-success', [
+            'message' => 'Esta cuenta ya está verificada',
+            'usuario' => $usuario
+        ]);
+    }
+
+    // Activar la cuenta
+    $usuario->rol = '3';
+    $usuario->estado = 'activo';
+    $usuario->email_verified_at = now();
+    $usuario->codigo_verificacion = null;
+    $usuario->save();
+
+    return view('email-verification-success', [
+        'message' => 'Cuenta verificada exitosamente',
+        'usuario' => $usuario
     ]);
-
-    if ($validator->fails()) {
-        return response()->json(['errors' => $validator->errors()], 422);
-    }
-
-    try {
-        $data = decrypt($request->token);
-
-        if ($data['expires'] < now()->timestamp) {
-            return response()->json(['message' => 'El enlace ha expirado'], 400);
-        }
-
-        $usuario = User::find($data['user_id']);
-
-        if (!$usuario) {
-            return response()->json(['message' => 'Usuario no encontrado'], 404);
-        }
-
-        if ($usuario->email !== $data['email']) {
-            return response()->json(['message' => 'El correo no coincide'], 400);
-        }
-
-        if ($usuario->codigo_verificacion !== $request->code) {
-            return response()->json(['message' => 'Código de verificación inválido'], 400);
-        }
-
-        if ($usuario->estado === 'activo') {
-            return response()->json(['message' => 'Esta cuenta ya está verificada'], 400);
-        }
-
-        $usuario->rol = '3';
-        $usuario->estado = 'activo';
-        $usuario->email_verified_at = now();
-        $usuario->codigo_verificacion = null;
-        $usuario->save();
-
-        return response()->json([
-            'message' => 'Cuenta verificada exitosamente',
-            'user' => [
-                'id' => $usuario->id,
-                'email' => $usuario->email,
-                'estado' => $usuario->estado
-            ]
-        ], 200);
-
-    } catch (\Exception $e) {
-        \Log::error('Error en verificación: ' . $e->getMessage());
-        return response()->json(['message' => 'Error al verificar la cuenta'], 500);
-    }
 }
 
 public function login(Request $request)
@@ -227,20 +212,30 @@ public function login(Request $request)
         return response()->json(['message' => 'Usuario deshabilitado'], 200);
     }
     public function mostrarUsuarios($id = null)
-{
-
-    if($id){
-        $usuario = User::find($id);
-        if (!$usuario) {
-            return response()->json(['error' => 'Usuario no encontrado'], 404);
+    {
+        $usuarioAutenticado = auth()->user();
+        
+        if (!$usuarioAutenticado) {
+            return response()->json(['error' => 'Usuario no autenticado'], 401);
         }
-        return response()->json($usuario, 200);
+
+        if ($id) {
+            $usuario = User::find($id);
+            if (!$usuario) {
+                return response()->json(['error' => 'Usuario no encontrado'], 404);
+            }
+            
+            if ($usuario->id === $usuarioAutenticado->id) {
+                return response()->json(['error' => 'No puedes solicitar tus propios datos por esta ruta'], 403);
+            }
+            
+            return response()->json($usuario, 200);
+        }
+
+        $usuarios = User::where('id', '!=', $usuarioAutenticado->id)->get();
+
+        return response()->json($usuarios, 200);
     }
-
-    $usuarios = User::all();
-
-    return response()->json($usuarios, 200);
-}
     public function activar_usuario(Request $request)
     {
         $validator = Validator::make($request->all(), [
@@ -303,42 +298,127 @@ public function login(Request $request)
     }
 
     public function renviarcodigo(Request $request)
-{
-    $email = $request->email;
-
-    $usuario = User::where('email', $email)->first();
-    
-    if (!$usuario) {
-        return response()->json(['message' => 'Usuario no encontrado'], 404);
-    }
-    
-    $ultimaActualizacion = $usuario->updated_at;
-    $tiempoMinimo = now()->subMinutes(10);
-    
-    if ($ultimaActualizacion->greaterThan($tiempoMinimo)) {
-        // No han pasado 10 minutos
-        $minutosRestantes = now()->diffInMinutes($ultimaActualizacion->addMinutes(10), false);
+    {
+        $validator = Validator::make($request->all(), [
+            'email' => 'required|string|email|max:255',
+        ]);
         
-        return response()->json([
-            'message' => 'Debes esperar '.$minutosRestantes.' minutos más antes de solicitar otro código.',
-            'puede_reenviar' => false,
-            'tiempo_restante' => $minutosRestantes
-        ], 429); // 429 Too Many Requests
+        if ($validator->fails()) {
+            return back()->withErrors($validator)->withInput();
+        }
+    
+        $usuario = User::where('email', $request->email)->first();
+        
+        if (!$usuario) {
+            return back()->with('error', 'No se encontró ninguna cuenta con este correo electrónico.')->withInput();
+        }
+        
+        // Verificar si la cuenta ya está activada
+        if ($usuario->estado === 'activo') {
+            return back()->with('success', 'Esta cuenta ya está verificada. Puedes iniciar sesión.');
+        }
+        
+        // Verificar límite de tiempo entre reenvíos
+        $ultimaActualizacion = $usuario->updated_at;
+        $tiempoMinimo = now()->subMinutes(5);
+        
+        if ($ultimaActualizacion->greaterThan($tiempoMinimo)) {
+            $minutosRestantes = now()->diffInMinutes($ultimaActualizacion->addMinutes(5), false);
+            
+            // Si quedan 0 minutos o menos, permitir el reenvío
+            if ($minutosRestantes <= 0) {
+                // Continuar con el reenvío
+            } else {
+                // En lugar de devolver error, mostrar alerta en la misma página
+                return back()->with('warning', 'Debes esperar '.$minutosRestantes.' minutos más antes de solicitar otro enlace.')->withInput();
+            }
+        }
+        
+        // Generar nuevo código de verificación
+        $codigo_verificacion = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $usuario->codigo_verificacion = $codigo_verificacion;
+        $usuario->save();
+        
+        // Generar URL firmada
+        $verificationUrl = URL::temporarySignedRoute(
+            'activar.cuenta', 
+            now()->addMinutes(5),
+            [
+                'email' => $usuario->email
+            ]
+        );
+    
+        try {
+            Mail::send('emails.verification', [
+                'usuario' => $usuario,
+                'codigo' => $codigo_verificacion,
+                'url' => $verificationUrl
+            ], function($message) use ($usuario) {
+                $message->to($usuario->email)
+                        ->subject('Activa tu cuenta');
+            });
+            
+            // Mostrar vista de éxito en lugar de redireccionar directamente
+            return view('auth.reenvio-exito', [
+                'email' => $usuario->email
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Error en reenvío de correo: ' . $e->getMessage());
+            return back()->with('error', 'Error al enviar el correo de verificación. Por favor, intenta de nuevo más tarde.')->withInput();
+        }
     }
-    
-    $codigo_verificacion = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-    $usuario->codigo_verificacion = $codigo_verificacion;
-    $usuario->save();
-    
-    $rutaFirmada = encrypt([
-        'user_id' => $usuario->id,
-        'email' => $usuario->email,
-        'expires' => now()->addMinutes(10)->timestamp
+
+    public function VerificarCuenta(){
+
+        $usuario = auth()->user();
+
+        return response()->json($usuario, 200);
+    }
+
+public function solicitarNuevoToken(Request $request)
+{
+    $validator = Validator::make($request->all(), [
+        'token' => 'required|string'
     ]);
 
-    $url = "http://localhost:4200/confirm-acount?token=" . urlencode($rutaFirmada);
+    if ($validator->fails()) {
+        return response()->json(['errors' => $validator->errors()], 422);
+    }
 
     try {
+        $data = decrypt($request->token);
+        
+        $usuario = User::find($data['user_id']);
+        
+        if (!$usuario) {
+            return response()->json(['message' => 'Usuario no encontrado'], 404);
+        }
+        
+        $ultimaActualizacion = $usuario->updated_at;
+        $tiempoMinimo = now()->subMinutes(10);
+        
+        if ($ultimaActualizacion->greaterThan($tiempoMinimo)) {
+            $minutosRestantes = now()->diffInMinutes($ultimaActualizacion->addMinutes(10), false);
+            
+            return response()->json([
+                'message' => 'Debes esperar '.$minutosRestantes.' minutos antes de solicitar otro código.',
+                'puede_reenviar' => false,
+                'tiempo_restante' => $minutosRestantes
+            ], 429);
+        }
+        
+        $codigo_verificacion = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $usuario->codigo_verificacion = $codigo_verificacion;
+        $usuario->save();
+        
+        $rutaFirmada = encrypt([
+            'user_id' => $usuario->id,
+            'email' => $usuario->email,
+            'expires' => now()->addMinutes(10)->timestamp
+        ]);
+
+        $url = "http://localhost:4200/confirm-acount?token=" . urlencode($rutaFirmada);
+
         Mail::send('Mail.verificacion', 
             [
                 'usuario' => $usuario, 
@@ -347,27 +427,110 @@ public function login(Request $request)
             ], 
             function ($message) use ($usuario) {
                 $message->to($usuario->email)
-                       ->subject('Código de Verificación');
+                       ->subject('Nuevo Código de Verificación');
         });
-    
+        
         return response()->json([
-            'message' => 'Reenvío de correo exitoso. Se ha enviado un nuevo código de verificación a tu correo.',
-            'puede_reenviar' => true,
-            'siguiente_reenvio' => now()->addMinutes(10)->toDateTimeString()
+            'message' => 'Se ha enviado un nuevo código de verificación a tu correo.',
+            'nuevo_token' => $rutaFirmada
         ], 200);
+        
     } catch (\Exception $e) {
-        \Log::error('Error en envío de correo: ' . $e->getMessage());
+        \Log::error('Error en solicitud de nuevo token: ' . $e->getMessage());
+        return response()->json(['message' => 'Error al procesar la solicitud'], 500);
+    }
+}
+
+    public function darrolguest($id){
+        $usuario = User::find($id);
+        if (!$usuario) {
+            return response()->json(['error' => 'Usuario no encontrado'], 404);
+        }
+        $usuario->rol = '1';
+        $usuario->save();
+        return response()->json($usuario, 200);
+    }
+
+
+public function refreshToken(Request $request)
+{
+    try {
+        $token = $request->bearerToken();
+        
+        if (!$token) {
+            return response()->json([
+                'message' => 'Token no proporcionado'
+            ], 401);
+        }
+        
+        JWTAuth::setToken($token);
+        
+        $user = JWTAuth::authenticate();
+        
+        if (!$user) {
+            return response()->json([
+                'message' => 'Usuario no encontrado'
+            ], 401);
+        }
+        
+        JWTAuth::invalidate();
+        
+        $newToken = JWTAuth::fromUser($user);
+        
         return response()->json([
-            'message' => 'Error al enviar el correo de verificación',
+            'message' => 'Token refrescado exitosamente',
+            'token' => $newToken,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->name ?? $user->nombre,
+                'email' => $user->email,
+                'rol' => $user->rol
+            ]
+        ]);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenExpiredException $e) {
+        return response()->json([
+            'message' => 'El token ha expirado'
+        ], 401);
+    } catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e) {
+        return response()->json([
+            'message' => 'El token es inválido'
+        ], 401);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Error al refrescar token',
             'error' => $e->getMessage()
         ], 500);
     }
 }
 
-    public function VerificarCuenta(){
+public function verificarCodigo(Request $request)
+{
+    $request->validate([
+        'email' => 'required|email',
+        'codigo' => 'required|string|size:6'
+    ]);
 
-        $usuario = auth()->user();
+    $usuario = User::where('email', $request->email)
+                  ->where('codigo_verificacion', $request->codigo)
+                  ->first();
 
-        return response()->json($usuario, 200);
+    if (!$usuario) {
+        return back()->with('error', 'Código de verificación incorrecto. Inténtalo de nuevo.');
     }
+
+    if ($usuario->estado === 'activo') {
+        return back()->with('success', 'Esta cuenta ya está activada. Puedes iniciar sesión.');
+    }
+
+    $usuario->estado = 'activo';
+    $usuario->rol = '3';
+    $usuario->email_verified_at = now();
+    $usuario->codigo_verificacion = null;
+    $usuario->save();
+
+    return view('auth.cuenta-activada', ['usuario' => $usuario]);
+}
+
+
+
 }
